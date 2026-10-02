@@ -1,8 +1,9 @@
-# A股智能分析工具依赖
-akshare>=1.12.0
-pandas>=2.0.0
-numpy>=1.24.0
-streamlit>=1.28.0
-plotly>=5.17.0
-requests>=2.31.0
-yfinance>=0.2.0
+# A股智能分析工具运行依赖
+akshare>=1.12,<2
+pandas>=2.2,<4
+numpy>=1.26,<3
+streamlit>=1.50,<2
+plotly>=5.17,<7
+requests>=2.31,<3
+yfinance>=0.2,<1
+tzdata>=2024.1; platform_system == "Windows"

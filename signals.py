@@ -1,13 +1,45 @@
 """
 综合信号模块 - 整合所有技术指标和K线形态，给出最终买卖建议
 """
+import math
+
 import pandas as pd
+
+from config import MIN_ANALYSIS_BARS
 from indicators import (
-    calculate_all_indicators, get_ma_signal, get_macd_signal,
-    get_kdj_signal, get_rsi_signal, get_boll_signal,
-    get_volume_signal, get_support_resistance
+    calculate_all_indicators,
+    get_boll_signal,
+    get_kdj_signal,
+    get_ma_signal,
+    get_macd_signal,
+    get_rsi_signal,
+    get_support_resistance,
+    get_volume_signal,
 )
 from patterns import detect_patterns
+
+
+def _round_or_none(value, digits: int = 2):
+    """安全格式化数值，缺失值不作为 0 展示。"""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return round(number, digits)
+
+
+def _validation_error(message: str, bars: int = 0) -> dict:
+    return {
+        "error": message,
+        "data_bars": bars,
+        "suggestion": "数据不足",
+        "action": "暂不分析",
+        "emoji": "⚪",
+    }
 
 
 def generate_comprehensive_signal(df: pd.DataFrame) -> dict:
@@ -15,8 +47,19 @@ def generate_comprehensive_signal(df: pd.DataFrame) -> dict:
     生成综合分析信号
     返回包含所有维度信号和综合建议的字典
     """
-    if df.empty:
-        return {"error": "数据为空"}
+    if df is None or df.empty:
+        return _validation_error("数据为空")
+
+    required = {"date", "open", "high", "low", "close", "volume"}
+    missing = sorted(required - set(df.columns))
+    if missing:
+        return _validation_error(f"K线缺少必要字段: {', '.join(missing)}")
+
+    if len(df) < MIN_ANALYSIS_BARS:
+        return _validation_error(
+            f"K线数据不足：至少需要{MIN_ANALYSIS_BARS}根，当前{len(df)}根",
+            bars=len(df),
+        )
 
     # 计算指标
     df = calculate_all_indicators(df)
@@ -118,9 +161,10 @@ def generate_comprehensive_signal(df: pd.DataFrame) -> dict:
         "total_score": round(total_score, 2),
         "details": details,
         "support_resistance": sr,
-        "latest_price": round(latest["close"], 2),
-        "pct_change": round(latest["pct_change"], 2),
-        "turnover": round(latest["turnover"], 2),
+        "latest_price": _round_or_none(latest["close"]),
+        "pct_change": _round_or_none(latest["pct_change"]),
+        "turnover": _round_or_none(latest["turnover"]),
+        "data_bars": len(df),
         "patterns": kline_patterns,
         # 具体指标值，供AI解读使用
         "indicator_values": {
@@ -139,9 +183,12 @@ def generate_comprehensive_signal(df: pd.DataFrame) -> dict:
 
 def format_signal_text(result: dict, stock_name: str, stock_code: str) -> str:
     """将信号结果格式化为纯文本（用于AI输入和推送）"""
+    latest_price = result["latest_price"] if result["latest_price"] is not None else "N/A"
+    pct_change = result["pct_change"] if result["pct_change"] is not None else "N/A"
+    turnover = result["turnover"] if result["turnover"] is not None else "N/A"
     lines = [
         f"【{stock_name}({stock_code}) 综合分析】",
-        f"最新价: {result['latest_price']}  涨跌幅: {result['pct_change']}%  换手率: {result['turnover']}%",
+        f"最新价: {latest_price}  涨跌幅: {pct_change}%  换手率: {turnover}%",
         f"综合判断: {result['emoji']} {result['suggestion']}（得分{result['total_score']}）",
         f"操作建议: {result['action']}",
         "",

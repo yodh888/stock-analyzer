@@ -67,8 +67,8 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 - 运行成功后，微信会收到分析报告
 
 **6. 定时推送**
-已配置为**北京时间周一到周五 15:30**（盘后）自动运行。
-可在 `.github/workflows/daily_push.yml` 中修改 `cron` 表达式调整时间。
+已配置为**北京时间周一到周五 15:30**（盘后）自动运行，非交易日会自动跳过。
+可在 `.github/workflows/daily_push.yml` 中修改 `cron` 表达式调整时间；手动触发时可勾选 `force_run` 强制执行。
 
 #### 成本
 - GitHub Actions：免费（每月2000分钟额度）
@@ -85,9 +85,13 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 ```bash
 # 上传代码到服务器后
-pip install -r requirements.txt
-nohup streamlit run app.py --server.address 0.0.0.0 --server.port 8501 &
+python -m venv venv
+source venv/bin/activate
+python -m pip install -r requirements.txt
+nohup streamlit run app.py --server.address 127.0.0.1 --server.port 8501 &
 ```
+
+> 云服务器不要直接把 Streamlit 暴露到公网。请在前面增加 Nginx/Caddy，配置 HTTPS、登录认证和访问控制；否则任何人访问到地址后都可能消耗你的 AI Key。
 
 手机访问 `http://服务器IP:8501` 即可。
 
@@ -101,7 +105,7 @@ nohup streamlit run app.py --server.address 0.0.0.0 --server.port 8501 &
 - 布林带 / 成交量分析
 - K线形态识别（早晨之星、吞没、红三兵等10+形态）
 - 支撑位 / 阻力位计算
-- 综合得分 + 买卖建议
+- 综合得分 + 条件式观察建议
 
 ### AI 辅助解读（可选）
 - 开启后用大模型综合解读所有指标

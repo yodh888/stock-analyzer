@@ -2,8 +2,10 @@
 AI解读模块 - 使用大模型对技术指标进行自然语言解读
 成本控制：使用短prompt、限制输出token、可切换开关
 """
-import json
+import time
+
 import requests
+
 from config import AI_PROVIDER, API_BASES, DEFAULT_MODELS, MAX_OUTPUT_TOKENS
 
 
@@ -23,7 +25,8 @@ def calculate_cost(input_tokens: int, output_tokens: int, provider: str) -> dict
         "deepseek": {"input": 0.001, "output": 0.002},      # deepseek-chat: 1元/百万输入, 2元/百万输出
         "kimi": {"input": 0.012, "output": 0.012},           # moonshot-v1-8k: 12元/百万
         "qwen": {"input": 0.008, "output": 0.008},           # qwen-turbo: 8元/百万
-        "openai": {"input": 0.15, "output": 0.6},            # gpt-4o-mini: $0.15/$0.6 per 1M
+        # OpenAI 官方价格按美元计，这里按 7.2 汇率换算为人民币估算。
+        "openai": {"input": 0.15 * 7.2, "output": 0.6 * 7.2},
     }
     p = prices.get(provider, {"input": 0.01, "output": 0.02})
     cost = (input_tokens * p["input"] + output_tokens * p["output"]) / 1000
@@ -31,7 +34,8 @@ def calculate_cost(input_tokens: int, output_tokens: int, provider: str) -> dict
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "cost_yuan": round(cost, 4),
-        "provider": provider
+        "currency": "CNY",
+        "provider": provider,
     }
 
 
@@ -129,28 +133,36 @@ def ai_analyze(stock_name: str, stock_code: str, signal_result: dict,
 
     # 估算成本
     input_tokens = estimate_tokens(system_prompt + user_prompt)
-    cost_info = calculate_cost(input_tokens, MAX_OUTPUT_TOKENS, provider)
 
     try:
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "max_tokens": MAX_OUTPUT_TOKENS,
-                "temperature": 0.3,
-            },
-            timeout=30
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        response = None
+        for attempt in range(3):
+            response = requests.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "max_tokens": MAX_OUTPUT_TOKENS,
+                    "temperature": 0.3,
+                },
+                timeout=(5, 30),
+            )
+            if response.status_code in {429, 500, 502, 503, 504} and attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+            response.raise_for_status()
+            break
+
+        if response is None:
+            raise RuntimeError("AI服务未返回响应")
+        data = response.json()
         text = data["choices"][0]["message"]["content"]
         actual_output_tokens = data.get("usage", {}).get("completion_tokens", MAX_OUTPUT_TOKENS)
         actual_input_tokens = data.get("usage", {}).get("prompt_tokens", input_tokens)
@@ -167,8 +179,8 @@ def ai_analyze(stock_name: str, stock_code: str, signal_result: dict,
         }
     except Exception as e:
         return {
-            "text": f"AI调用失败：{str(e)}",
-            "cost": cost_info["cost_yuan"],
-            "tokens": input_tokens,
-            "error": str(e)
+            "text": "AI调用失败，请查看运行日志。",
+            "cost": 0,
+            "tokens": 0,
+            "error": type(e).__name__,
         }

@@ -3,7 +3,6 @@ K线形态识别模块
 识别经典K线形态，给出信号
 """
 import pandas as pd
-import numpy as np
 
 
 def _is_bullish(row):
@@ -76,7 +75,9 @@ def detect_patterns(df: pd.DataFrame) -> list:
     # 锤子线（下影线长，实体小，在低位）
     lower = _lower_shadow(d0)
     body = _body(d0)
-    if lower > body * 2 and _upper_shadow(d0) < body * 0.5 and d0["close"] < d0["ma20"] if "ma20" in df.columns and not pd.isna(d0.get("ma20")) else lower > body * 2:
+    has_ma20 = "ma20" in df.columns and not pd.isna(d0.get("ma20"))
+    is_low_position = not has_ma20 or d0["close"] < d0["ma20"]
+    if lower > body * 2 and _upper_shadow(d0) < body * 0.5 and is_low_position:
         patterns.append({
             "name": "锤子线",
             "signal": "看多",

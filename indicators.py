@@ -2,7 +2,6 @@
 技术指标计算模块（纯pandas/numpy实现，无需pandas-ta）
 """
 import pandas as pd
-import numpy as np
 
 
 def _sma(series: pd.Series, length: int) -> pd.Series:
@@ -80,7 +79,8 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 def get_ma_signal(df: pd.DataFrame) -> dict:
     """均线系统信号"""
     if df.empty or len(df) < 60:
-        return {"signal": "数据不足", "desc": "K线数据不足，无法分析均线"}
+        return {"signal": "数据不足", "score": 0, "desc": "K线数据不足，无法分析均线",
+            "ma5": None, "ma10": None, "ma20": None, "ma60": None}
 
     latest = df.iloc[-1]
     prev = df.iloc[-2]
@@ -141,8 +141,9 @@ def get_ma_signal(df: pd.DataFrame) -> dict:
 
 def get_macd_signal(df: pd.DataFrame) -> dict:
     """MACD信号"""
-    if df.empty or "macd" not in df.columns or df["macd"].isna().all():
-        return {"signal": "数据不足", "desc": "MACD数据不足"}
+    if len(df) < 2 or "macd" not in df.columns or df["macd"].isna().all():
+        return {"signal": "数据不足", "score": 0, "desc": "MACD数据不足",
+                "macd": None, "signal_line": None, "hist": None}
 
     latest = df.iloc[-1]
     prev = df.iloc[-2]
@@ -190,8 +191,9 @@ def get_macd_signal(df: pd.DataFrame) -> dict:
 
 def get_kdj_signal(df: pd.DataFrame) -> dict:
     """KDJ信号"""
-    if df.empty or "k" not in df.columns or df["k"].isna().all():
-        return {"signal": "数据不足", "desc": "KDJ数据不足"}
+    if len(df) < 2 or "k" not in df.columns or df["k"].isna().all():
+        return {"signal": "数据不足", "score": 0, "desc": "KDJ数据不足",
+                "k": None, "d": None, "j": None}
 
     latest = df.iloc[-1]
     prev = df.iloc[-2]
@@ -241,7 +243,8 @@ def get_kdj_signal(df: pd.DataFrame) -> dict:
 def get_rsi_signal(df: pd.DataFrame) -> dict:
     """RSI信号"""
     if df.empty or "rsi6" not in df.columns or df["rsi6"].isna().all():
-        return {"signal": "数据不足", "desc": "RSI数据不足"}
+        return {"signal": "数据不足", "score": 0, "desc": "RSI数据不足",
+            "rsi6": None, "rsi12": None}
 
     latest = df.iloc[-1]
     rsi = latest["rsi6"]
@@ -281,7 +284,8 @@ def get_rsi_signal(df: pd.DataFrame) -> dict:
 def get_boll_signal(df: pd.DataFrame) -> dict:
     """布林带信号"""
     if df.empty or "boll_upper" not in df.columns or df["boll_upper"].isna().all():
-        return {"signal": "数据不足", "desc": "布林带数据不足"}
+        return {"signal": "数据不足", "score": 0, "desc": "布林带数据不足",
+            "upper": None, "mid": None, "lower": None}
 
     latest = df.iloc[-1]
     close = latest["close"]
@@ -322,7 +326,8 @@ def get_boll_signal(df: pd.DataFrame) -> dict:
 def get_volume_signal(df: pd.DataFrame) -> dict:
     """量价分析"""
     if df.empty or len(df) < 10:
-        return {"signal": "数据不足", "desc": "成交量数据不足"}
+        return {"signal": "数据不足", "score": 0, "desc": "成交量数据不足",
+            "volume": None, "vol_ratio": None}
 
     latest = df.iloc[-1]
     vol_ma5 = latest["vol_ma5"]
