@@ -163,9 +163,20 @@ def push_to_pushdeer(
                 "type": "markdown",
             },
         )
-        return result.get("code", -1) == 0
+        code = result.get("code", -1)
+        if code == 0:
+            return True
+        error = str(result.get("error") or result.get("message") or "unknown")
+        error = error.replace(pushkey, "***").replace("\r", " ").replace("\n", " ")[:500]
+        LOGGER.warning("PushDeer推送失败: code=%s error=%s", code, error)
+        return False
     except Exception as exc:
-        LOGGER.warning("PushDeer推送失败: %s", type(exc).__name__)
+        status = getattr(getattr(exc, "response", None), "status_code", "-")
+        LOGGER.warning(
+            "PushDeer推送异常: type=%s status=%s",
+            type(exc).__name__,
+            status,
+        )
         return False
 
 

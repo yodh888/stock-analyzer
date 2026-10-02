@@ -13,6 +13,7 @@
     AI_ENABLED      true/false
 """
 
+import logging
 import os
 import re
 import sys
@@ -233,6 +234,7 @@ def format_pushdeer_report(results: list, now: datetime | None = None) -> str:
 
 
 def main() -> int:
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
     print("=" * 50)
     print("自选股分析推送启动")
     print("=" * 50)

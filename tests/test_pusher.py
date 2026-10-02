@@ -103,6 +103,18 @@ def test_pushdeer_payload(monkeypatch):
     }
 
 
+def test_pushdeer_business_error_logs_code_and_error_without_key(monkeypatch, caplog):
+    def fake_post(url, data, timeout):
+        return FakeResponse({"code": 80501, "error": "bad pushkey push-key"})
+
+    monkeypatch.setattr(pusher.requests, "post", fake_post)
+    with caplog.at_level(logging.WARNING):
+        assert pusher.push_to_pushdeer("push-key", "title", "content") is False
+    assert "code=80501" in caplog.text
+    assert "bad pushkey" in caplog.text
+    assert "push-key" not in caplog.text
+
+
 def test_pushdeer_supports_self_hosted_url(monkeypatch):
     captured = {}
 
