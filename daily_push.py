@@ -5,6 +5,7 @@
     SERVERCHAN_KEY  Server酱 SendKey（定时工作流必填）
     AI_API_KEY      AI API Key（可选）
     AI_PROVIDER     deepseek/kimi/qwen/openai
+    AI_MODEL        可选，服务商模型名称
     AI_ENABLED      true/false
 """
 
@@ -15,7 +16,7 @@ import time
 from datetime import datetime
 
 from ai_analyzer import ai_analyze
-from config import SHANGHAI_TZ
+from config import AI_MODEL, AI_PROVIDER, SHANGHAI_TZ, normalize_provider
 from data_fetcher import (
     get_financial_basic,
     get_kline_data,
@@ -49,6 +50,7 @@ def analyze_stock(
     ai_enabled: bool = False,
     api_key: str = "",
     provider: str = "deepseek",
+    model: str = "",
 ) -> dict:
     """分析单只股票，网络异常时重试，数据不足时不重复请求。"""
     max_retries = 3
@@ -74,8 +76,17 @@ def analyze_stock(
             ai_text = ""
             if ai_enabled and api_key:
                 financial = get_financial_basic(code)
-                ai_result = ai_analyze(name, code, result, financial, api_key, provider)
+                ai_result = ai_analyze(
+                    name,
+                    code,
+                    result,
+                    financial,
+                    api_key,
+                    provider,
+                    model,
+                )
                 if ai_result.get("error"):
+                    print(f"AI分析失败: {ai_result.get('error')}")
                     ai_text = "AI分析失败，请查看运行日志。"
                 else:
                     ai_text = ai_result.get("text", "")
@@ -172,7 +183,8 @@ def main() -> int:
 
     sendkey = os.getenv("SERVERCHAN_KEY", "").strip()
     ai_key = os.getenv("AI_API_KEY", "").strip()
-    ai_provider = (os.getenv("AI_PROVIDER", "") or "deepseek").strip().lower()
+    ai_provider = normalize_provider(os.getenv("AI_PROVIDER", "") or AI_PROVIDER)
+    ai_model = (os.getenv("AI_MODEL", "") or AI_MODEL).strip()
     ai_enabled = os.getenv("AI_ENABLED", "false").strip().lower() == "true"
 
     if ai_enabled and not ai_key:
@@ -180,7 +192,7 @@ def main() -> int:
         ai_enabled = False
 
     print(
-        f"配置: AI={'开启(' + ai_provider + ')' if ai_enabled else '关闭'}, "
+        f"配置: AI={'开启(' + ai_provider + '/' + (ai_model or '默认模型') + ')' if ai_enabled else '关闭'}, "
         f"推送={'开启' if sendkey else '关闭'}"
     )
 
@@ -193,7 +205,7 @@ def main() -> int:
     results = []
     for index, code in enumerate(stocks, 1):
         print(f"[{index}/{len(stocks)}] 分析 {code}...")
-        result = analyze_stock(code, ai_enabled, ai_key, ai_provider)
+        result = analyze_stock(code, ai_enabled, ai_key, ai_provider, ai_model)
         results.append(result)
         if "error" not in result:
             print(f"  ✓ {result['name']}: {result['result']['emoji']} {result['result']['suggestion']}")

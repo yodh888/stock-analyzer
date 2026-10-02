@@ -7,7 +7,7 @@ SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 MIN_ANALYSIS_BARS = 60
 
 # ============ AI 大模型配置 ============
-AI_PROVIDER = os.getenv("AI_PROVIDER", "deepseek").strip().lower()
+DEFAULT_AI_PROVIDER = "deepseek"
 API_BASES = {
     "deepseek": "https://api.deepseek.com/v1",
     "kimi": "https://api.moonshot.cn/v1",
@@ -20,9 +20,22 @@ DEFAULT_MODELS = {
     "qwen": "qwen-turbo",
     "openai": "gpt-4o-mini",
 }
-AI_API_KEY = os.getenv("AI_API_KEY", "")
+
+
+def normalize_provider(value: str | None) -> str:
+    """把环境变量中的服务商名称规范化。"""
+    provider = (value or "").strip().lower()
+    return provider if provider in API_BASES else DEFAULT_AI_PROVIDER
+
+
+AI_PROVIDER = normalize_provider(os.getenv("AI_PROVIDER"))
+AI_MODEL = os.getenv("AI_MODEL", "").strip()
+AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_ENABLED = os.getenv("AI_ENABLED", "false").strip().lower() == "true"
 MAX_OUTPUT_TOKENS = 1500
+AI_CONNECT_TIMEOUT = 5
+AI_READ_TIMEOUT = 30
+AI_MAX_RETRIES = 3
 
 
 # ============ 数据配置 ============

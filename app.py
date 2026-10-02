@@ -6,7 +6,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 import config
-from ai_analyzer import ai_analyze
+from ai_analyzer import ai_analyze, test_ai_connection
 from data_fetcher import (
     get_financial_basic,
     get_hot_stocks,
@@ -75,8 +75,30 @@ with st.sidebar:
     )
 
     providers = list(config.API_BASES)
-    default_provider = config.AI_PROVIDER if config.AI_PROVIDER in providers else "deepseek"
+    default_provider = (
+        config.AI_PROVIDER if config.AI_PROVIDER in providers else config.DEFAULT_AI_PROVIDER
+    )
     provider = st.selectbox("AI服务商", providers, index=providers.index(default_provider))
+    default_model = config.AI_MODEL or config.DEFAULT_MODELS[provider]
+    model = st.text_input(
+        "模型名称",
+        value=default_model,
+        key=f"ai_model_{provider}",
+        help="可以填写服务商支持的模型名称",
+    )
+
+    if ai_enabled and api_key and st.button("测试 AI 连接", width="stretch"):
+        with st.spinner("正在测试 AI 连接..."):
+            connection = test_ai_connection(api_key, provider=provider, model=model)
+        if connection.get("ok"):
+            st.success(
+                f"连接成功：{connection['provider']} / {connection['model']} "
+                f"({connection['latency_ms']} ms)"
+            )
+        else:
+            status_code = connection.get("status_code")
+            detail = f"，HTTP {status_code}" if status_code else ""
+            st.error(f"{connection.get('message', '连接失败')}{detail}")
 
     st.divider()
     st.subheader("推送设置（可选）")
@@ -162,6 +184,7 @@ if analyze_btn:
                 financial,
                 api_key,
                 provider,
+                model,
             )
             ai_text = ai_result.get("text", "")
             ai_error = ai_result.get("error", "")
@@ -175,6 +198,8 @@ if analyze_btn:
         "result": result,
         "ai_text": ai_text,
         "ai_error": ai_error,
+        "ai_provider": provider,
+        "ai_model": model,
     }
 
 analysis = st.session_state.get("analysis")
@@ -187,6 +212,8 @@ if analysis:
     result = analysis["result"]
     ai_text = analysis["ai_text"]
     ai_error = analysis["ai_error"]
+    ai_provider = analysis.get("ai_provider", provider)
+    ai_model = analysis.get("ai_model", model)
 
     st.subheader(f"{result['emoji']} {state_name}({state_code})")
     price_column, suggest_column, action_column = st.columns(3)
@@ -325,6 +352,7 @@ if analysis:
     if ai_text:
         st.divider()
         st.subheader("🤖 AI 智能解读")
+        st.caption(f"服务商: {ai_provider} | 模型: {ai_model}")
         st.markdown(ai_text)
     elif ai_error:
         st.warning("AI分析失败，规则信号不受影响。")

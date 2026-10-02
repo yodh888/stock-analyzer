@@ -50,9 +50,21 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 | 名称 | 值 | 必填 |
 |------|-----|------|
 | `SERVERCHAN_KEY` | 你的 Server酱 SendKey | ✅ 必填 |
-| `AI_API_KEY` | DeepSeek/Kimi的API Key | ❌ 可选 |
-| `AI_PROVIDER` | `deepseek` 或 `kimi` | ❌ 可选 |
-| `AI_ENABLED` | `true` 或 `false` | ❌ 可选 |
+| `AI_API_KEY` | DeepSeek/Kimi/通义千问/OpenAI 的 API Key | ❌ 可选 |
+| `AI_PROVIDER` | `deepseek`、`kimi`、`qwen` 或 `openai` | ❌ 可选 |
+| `AI_MODEL` | 自定义模型名称；留空使用默认模型 | ❌ 可选 |
+| `AI_ENABLED` | `true` 开启 AI，`false` 或留空关闭 | ❌ 可选 |
+
+默认 AI 配置：
+
+| 服务商 | `AI_PROVIDER` | 默认模型 |
+|---|---|---|
+| DeepSeek | `deepseek` | `deepseek-chat` |
+| Kimi | `kimi` | `moonshot-v1-8k` |
+| 通义千问 | `qwen` | `qwen-turbo` |
+| OpenAI | `openai` | `gpt-4o-mini` |
+
+注意：当前 workflow 从 `secrets` 读取这些配置，因此 `AI_PROVIDER`、`AI_MODEL` 和 `AI_ENABLED` 也应添加到 **Repository secrets**，不能只添加到 Variables。API Key 不会被打印到日志，AI 失败时只会记录服务商、模型、错误类型和 HTTP 状态码。
 
 **4. 修改自选股**
 编辑 `watchlist.txt`，改成你关注的股票代码（每行一个）：
@@ -65,6 +77,13 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 **5. 触发运行测试**
 - 仓库页面：`Actions` → 点击 `自选股每日分析推送` → `Run workflow`
 - 运行成功后，微信会收到分析报告
+
+**5.1 单独测试 AI 连接（推荐）**
+- 进入 `Actions` → 点击 `AI 连接测试` → `Run workflow`
+- `provider` 选择 `default` 时，使用 `AI_PROVIDER` Secret；也可以临时选择某个服务商
+- `model` 留空时使用服务商默认模型
+- 这个测试只发送一句 `只回复 OK`，不会读取行情，也不会发送微信
+- Workflow 成功代表 API Key、服务商和模型配置有效
 
 **6. 定时推送**
 已配置为**北京时间周一到周五 15:30**（盘后）自动运行，非交易日会自动跳过。
