@@ -181,6 +181,57 @@ def format_push_report(results: list, now: datetime | None = None) -> str:
     ])
     return "\n".join(lines)
 
+def format_pushdeer_report(results: list, now: datetime | None = None) -> str:
+    """生成适合 PushDeer 手机端的紧凑纯文本格式。"""
+    current = now or datetime.now(SHANGHAI_TZ)
+    succeeded = sum(1 for item in results if "error" not in item)
+    lines = [
+        "📈 自选股分析日报",
+        f"时间：{current:%Y-%m-%d %H:%M}",
+        f"成功：{succeeded}/{len(results)} 只",
+        "",
+    ]
+
+    for index, item in enumerate(results, 1):
+        lines.append("────────────────")
+        if "error" in item:
+            lines.extend([
+                f"【{index}】{item['name']} {item['code']}",
+                f"❌ 获取失败：{item['error']}",
+                "",
+            ])
+            continue
+
+        result = item["result"]
+        lines.extend([
+            f"【{index}】{item['name']} {item['code']}",
+            f"{result['emoji']} 信号：{result['suggestion']}｜得分 {result['total_score']}",
+            f"价格：{_format_value(result['latest_price'])}"
+            f"｜涨跌：{_format_value(result['pct_change'], '%')}"
+            f"｜换手：{_format_value(result['turnover'], '%')}",
+            f"建议：{result['action']}",
+            f"支撑阻力：{result['support_resistance']['desc']}",
+        ])
+
+        details = result.get("details", [])
+        if details:
+            lines.append("关键信号：")
+            for detail in details:
+                lines.append(f"• {detail['维度']}：{detail['信号']}")
+
+        ai_text = (item.get("ai_text") or "").strip()
+        if ai_text:
+            lines.extend(["", "AI解读：", ai_text])
+
+        lines.append("")
+
+    lines.extend([
+        "────────────────",
+        "⚠️ 仅供参考，不构成投资建议。",
+    ])
+    return "\n".join(lines)
+
+
 def main() -> int:
     print("=" * 50)
     print("自选股分析推送启动")
@@ -237,6 +288,7 @@ def main() -> int:
         time.sleep(1)
 
     report = format_push_report(results)
+    pushdeer_report = format_pushdeer_report(results)
     print("\n" + "=" * 50)
     print("分析报告:")
     print("=" * 50)
@@ -256,7 +308,7 @@ def main() -> int:
             print("❌ 飞书推送失败")
             push_failed = True
     if pushdeer_key:
-        if push_to_pushdeer(pushdeer_key, title, report, pushdeer_api_url):
+        if push_to_pushdeer(pushdeer_key, title, pushdeer_report, pushdeer_api_url):
             print("✓ PushDeer推送成功")
         else:
             print("❌ PushDeer推送失败")
