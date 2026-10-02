@@ -83,3 +83,38 @@ def test_feishu_failure_does_not_log_webhook(monkeypatch, caplog):
         assert pusher.push_to_feishu(webhook, "title", "content") is False
     assert webhook not in caplog.text
     assert "ConnectionError" in caplog.text
+
+def test_pushdeer_payload(monkeypatch):
+    captured = {}
+
+    def fake_post(url, data, timeout):
+        captured["url"] = url
+        captured["data"] = data
+        return FakeResponse({"code": 0})
+
+    monkeypatch.setattr(pusher.requests, "post", fake_post)
+    assert pusher.push_to_pushdeer("push-key", "日报标题", "日报内容") is True
+    assert captured["url"] == "https://api2.pushdeer.com/message/push"
+    assert captured["data"] == {
+        "pushkey": "push-key",
+        "text": "日报标题",
+        "desp": "日报内容",
+        "type": "markdown",
+    }
+
+
+def test_pushdeer_supports_self_hosted_url(monkeypatch):
+    captured = {}
+
+    def fake_post(url, data, timeout):
+        captured["url"] = url
+        return FakeResponse({"code": 0})
+
+    monkeypatch.setattr(pusher.requests, "post", fake_post)
+    assert pusher.push_to_pushdeer(
+        "push-key",
+        "title",
+        "content",
+        "https://push.example.com/message/push",
+    ) is True
+    assert captured["url"] == "https://push.example.com/message/push"

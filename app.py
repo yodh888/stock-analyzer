@@ -106,18 +106,27 @@ with st.sidebar:
     push_type = None
     push_token = ""
     push_secret = ""
+    push_endpoint = ""
     if push_enabled:
         push_type = st.selectbox(
             "推送方式",
-            ["feishu", "wecom", "serverchan", "pushplus"],
+            ["feishu", "pushdeer", "wecom", "serverchan", "pushplus"],
         )
-        token_label = "飞书 Webhook" if push_type == "feishu" else "推送 Token/Webhook"
+        token_label = {
+            "feishu": "飞书 Webhook",
+            "pushdeer": "PushDeer PushKey",
+        }.get(push_type, "推送 Token/Webhook")
         push_token = st.text_input(token_label, type="password")
         if push_type == "feishu":
             push_secret = st.text_input(
                 "飞书签名 Secret（可选）",
                 type="password",
                 value=config.FEISHU_SECRET,
+            )
+        if push_type == "pushdeer":
+            push_endpoint = st.text_input(
+                "PushDeer API地址",
+                value=config.PUSHDEER_API_URL,
             )
 
 
@@ -381,6 +390,7 @@ if analysis:
                 result,
                 ai_text,
                 push_secret=push_secret,
+                push_endpoint=push_endpoint,
             )
             if success:
                 st.success("推送成功，请查看手机")
@@ -420,6 +430,6 @@ elif not analyze_btn:
         - 成本可控
 
         **推送（可选）**
-        - 飞书 / 企业微信 / Server酱 / PushPlus
+        - 飞书 / PushDeer / 企业微信 / Server酱 / PushPlus
         """)
     st.caption("⚠️ 本工具仅供学习研究，不构成任何投资建议。股市有风险，投资需谨慎。")

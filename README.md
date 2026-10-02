@@ -1,7 +1,7 @@
 # 📈 A股智能分析工具
 
 技术面 + 轻量基本面 + AI辅助解读 的股票分析工具
-支持：电脑网页、手机浏览器、微信/飞书每日推送
+支持：电脑网页、手机浏览器、飞书/PushDeer每日推送
 
 ---
 
@@ -28,7 +28,7 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 **适合**：每天自动收到自选股分析，不用开电脑
 
-**原理**：GitHub Actions 每天定时运行分析脚本，通过飞书机器人或 Server酱推送到手机。
+**原理**：GitHub Actions 每天定时运行分析脚本，通过飞书和/或 PushDeer 推送到手机。
 
 #### 部署步骤
 
@@ -49,9 +49,11 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 | 名称 | 值 | 必填 |
 |------|-----|------|
-| `FEISHU_WEBHOOK` | 飞书自定义机器人 Webhook | 与 Server酱二选一 |
+| `FEISHU_WEBHOOK` | 飞书自定义机器人 Webhook | 与 PushDeer/Server酱二选一 |
 | `FEISHU_SECRET` | 飞书机器人签名 Secret | 可选 |
-| `SERVERCHAN_KEY` | 你的 Server酱 SendKey | 与飞书二选一 |
+| `PUSHDEER_PUSHKEY` | PushDeer PushKey | 与飞书可同时使用 |
+| `PUSHDEER_API_URL` | PushDeer API 地址 | 可选，自建服务使用 |
+| `SERVERCHAN_KEY` | 你的 Server酱 SendKey | 旧通道，可选 |
 | `AI_API_KEY` | DeepSeek/Kimi/通义千问/OpenAI 的 API Key | ❌ 可选 |
 | `AI_PROVIDER` | `deepseek`、`kimi`、`qwen` 或 `openai` | ❌ 可选 |
 | `AI_MODEL` | 自定义模型名称；留空使用默认模型 | ❌ 可选 |
@@ -78,7 +80,7 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 **5. 触发运行测试**
 - 仓库页面：`Actions` → 点击 `自选股每日分析推送` → `Run workflow`
-- 运行成功后，微信会收到分析报告
+- 运行成功后，飞书和/或 PushDeer 会收到分析报告
 
 **5.1 单独测试 AI 连接（推荐）**
 - 进入 `Actions` → 点击 `AI 连接测试` → `Run workflow`
@@ -99,11 +101,26 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 6. 回到 GitHub：`Settings` → `Secrets and variables` → `Actions` → `New repository secret`，添加：
    - `FEISHU_WEBHOOK`：飞书 Webhook 地址
    - `FEISHU_SECRET`：启用签名校验时填写，否则可以不创建
-7. 配置飞书后，`SERVERCHAN_KEY` 可以删除或保留。两者都存在时，程序会同时发送到飞书和 Server酱。
+7. 配置飞书后，可以同时配置 PushDeer；两者都存在时，日报会同时发送到飞书和 PushDeer。
 8. 运行 `自选股每日分析推送`；非交易日需要勾选 `force_run`。
 9. 飞书群里收到“自选股日报”即表示配置成功。
 
 程序支持飞书签名校验，日志不会打印完整 Webhook 或签名 Secret。
+
+**5.3 配置 PushDeer**
+
+PushDeer 可以推送到 PushDeer 官方服务或自建服务。官方项目已经停止维护，但官方 API 服务仍在使用；长期稳定性要求高时建议自建或把飞书作为主通道。
+
+1. 安装并登录 PushDeer 客户端。
+2. 在「设备」页面注册当前设备。
+3. 在「Key」页面创建一个 Key。
+4. 回到 GitHub：`Settings` → `Secrets and variables` → `Actions` → `New repository secret`，添加：
+   - `PUSHDEER_PUSHKEY`：PushDeer Key
+   - `PUSHDEER_API_URL`：可选；留空使用 `https://api2.pushdeer.com/message/push`
+5. 如果使用自建 PushDeer，把完整 API 地址填入 `PUSHDEER_API_URL`。
+6. 配置飞书和 PushDeer 后，日报会同时发送到两个通道；其中一个失败时工作流会返回失败状态，但已经成功的通道不会重复发送。
+
+PushDeer 官方在线服务可能存在额度或收费策略，自建服务代码对非商业使用通常免费，但仍需要服务器和证书维护成本。以 PushDeer 官方最新说明为准。
 
 **6. 定时推送**
 已配置为**北京时间周一到周五 15:30**（盘后）自动运行，非交易日会自动跳过。
@@ -111,7 +128,7 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 #### 成本
 - GitHub Actions：免费（每月2000分钟额度）
-- Server酱：免费版每天5条推送；飞书自定义机器人通常不额外收费
+- 飞书自定义机器人通常不额外收费；PushDeer 官方服务可能有额度/收费，自建服务需服务器成本
 - AI分析：可选，DeepSeek约0.003元/次
 
 ---
@@ -152,9 +169,9 @@ nohup streamlit run app.py --server.address 127.0.0.1 --server.port 8501 &
 - 成本约 0.003-0.05 元/次
 
 ### 推送到手机
-- Server酱（微信推送）、飞书机器人
-- 企业微信群机器人
-- PushPlus
+- 飞书机器人
+- PushDeer
+- Server酱、企业微信和 PushPlus（兼容保留）
 
 ---
 

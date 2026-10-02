@@ -44,9 +44,10 @@ jobs:
         env:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          PUSHDEER_PUSHKEY: ${{ secrets.PUSHDEER_PUSHKEY }}
         run: |
-          if [ -z "$SERVERCHAN_KEY" ] && [ -z "$FEISHU_WEBHOOK" ]; then
-            echo "::error::请至少配置 FEISHU_WEBHOOK 或 SERVERCHAN_KEY"
+          if [ -z "$SERVERCHAN_KEY" ] && [ -z "$FEISHU_WEBHOOK" ] && [ -z "$PUSHDEER_PUSHKEY" ]; then
+            echo "::error::请至少配置 FEISHU_WEBHOOK、PUSHDEER_PUSHKEY 或 SERVERCHAN_KEY"
             exit 1
           fi
 
@@ -57,6 +58,8 @@ jobs:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          PUSHDEER_PUSHKEY: ${{ secrets.PUSHDEER_PUSHKEY }}
+          PUSHDEER_API_URL: ${{ secrets.PUSHDEER_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
           AI_MODEL: ${{ secrets.AI_MODEL }}

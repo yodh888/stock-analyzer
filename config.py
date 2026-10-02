@@ -47,3 +47,8 @@ REFRESH_INTERVAL = 60
 WECOM_WEBHOOK = os.getenv("WECOM_WEBHOOK", "")
 FEISHU_WEBHOOK = os.getenv("FEISHU_WEBHOOK", "")
 FEISHU_SECRET = os.getenv("FEISHU_SECRET", "")
+PUSHDEER_PUSHKEY = os.getenv("PUSHDEER_PUSHKEY", "")
+PUSHDEER_API_URL = (
+    os.getenv("PUSHDEER_API_URL", "").strip()
+    or "https://api2.pushdeer.com/message/push"
+)

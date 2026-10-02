@@ -5,6 +5,8 @@
     SERVERCHAN_KEY  Server酱 SendKey（与飞书二选一）
     FEISHU_WEBHOOK  飞书自定义机器人 Webhook（与Server酱二选一）
     FEISHU_SECRET   飞书机器人签名 Secret（可选）
+    PUSHDEER_PUSHKEY PushDeer PushKey（与飞书/Server酱可同时使用）
+    PUSHDEER_API_URL PushDeer API地址（可选，自建服务使用）
     AI_API_KEY      AI API Key（可选）
     AI_PROVIDER     deepseek/kimi/qwen/openai
     AI_MODEL        可选，服务商模型名称
@@ -18,14 +20,20 @@ import time
 from datetime import datetime
 
 from ai_analyzer import ai_analyze
-from config import AI_MODEL, AI_PROVIDER, SHANGHAI_TZ, normalize_provider
+from config import (
+    AI_MODEL,
+    AI_PROVIDER,
+    PUSHDEER_API_URL,
+    SHANGHAI_TZ,
+    normalize_provider,
+)
 from data_fetcher import (
     get_financial_basic,
     get_kline_data,
     get_stock_name,
     is_trade_day,
 )
-from pusher import push_to_feishu, push_to_serverchan
+from pusher import push_to_feishu, push_to_pushdeer, push_to_serverchan
 from signals import generate_comprehensive_signal
 
 
@@ -186,6 +194,10 @@ def main() -> int:
     sendkey = os.getenv("SERVERCHAN_KEY", "").strip()
     feishu_webhook = os.getenv("FEISHU_WEBHOOK", "").strip()
     feishu_secret = os.getenv("FEISHU_SECRET", "").strip()
+    pushdeer_key = os.getenv("PUSHDEER_PUSHKEY", "").strip()
+    pushdeer_api_url = (
+        os.getenv("PUSHDEER_API_URL", "").strip() or PUSHDEER_API_URL
+    )
     ai_key = os.getenv("AI_API_KEY", "").strip()
     ai_provider = normalize_provider(os.getenv("AI_PROVIDER", "") or AI_PROVIDER)
     ai_model = (os.getenv("AI_MODEL", "") or AI_MODEL).strip()
@@ -198,6 +210,8 @@ def main() -> int:
     channels = []
     if feishu_webhook:
         channels.append("飞书")
+    if pushdeer_key:
+        channels.append("PushDeer")
     if sendkey:
         channels.append("Server酱")
     print(
@@ -240,6 +254,12 @@ def main() -> int:
             print("✓ 飞书推送成功")
         else:
             print("❌ 飞书推送失败")
+            push_failed = True
+    if pushdeer_key:
+        if push_to_pushdeer(pushdeer_key, title, report, pushdeer_api_url):
+            print("✓ PushDeer推送成功")
+        else:
+            print("❌ PushDeer推送失败")
             push_failed = True
     if sendkey:
         if push_to_serverchan(sendkey, title, report):

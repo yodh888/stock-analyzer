@@ -144,6 +144,31 @@ def push_to_feishu(
         return False
 
 
+def push_to_pushdeer(
+    pushkey: str,
+    title: str,
+    content: str,
+    api_url: str = "https://api2.pushdeer.com/message/push",
+) -> bool:
+    """推送到 PushDeer 官方或自建服务。"""
+    if not pushkey:
+        return False
+    try:
+        result = _post_form(
+            api_url,
+            form_data={
+                "pushkey": pushkey,
+                "text": title,
+                "desp": content,
+                "type": "markdown",
+            },
+        )
+        return result.get("code", -1) == 0
+    except Exception as exc:
+        LOGGER.warning("PushDeer推送失败: %s", type(exc).__name__)
+        return False
+
+
 def push_result(
     push_type: str,
     token: str,
@@ -152,6 +177,7 @@ def push_result(
     signal_result: dict,
     ai_text: str = "",
     push_secret: str = "",
+    push_endpoint: str = "",
 ) -> bool:
     """统一推送入口。"""
     title = (
@@ -185,4 +211,6 @@ def push_result(
         return push_to_pushplus(token, title, content)
     if push_type == "feishu":
         return push_to_feishu(token, title, content, push_secret)
+    if push_type == "pushdeer":
+        return push_to_pushdeer(token, title, content, push_endpoint)
     return False
