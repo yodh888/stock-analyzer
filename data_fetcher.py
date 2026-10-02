@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 def _symbol_with_prefix(code: str) -> str:
     """给股票代码加市场前缀"""
-    if code.startswith("6"):
+    if code.startswith(("6", "5", "9")):
         return f"sh{code}"
     else:
         return f"sz{code}"
@@ -20,7 +20,7 @@ def _symbol_with_prefix(code: str) -> str:
 
 def _yahoo_symbol(code: str) -> str:
     """转成Yahoo Finance的代码格式"""
-    if code.startswith("6"):
+    if code.startswith(("6", "5", "9")):
         return f"{code}.SS"
     else:
         return f"{code}.SZ"
