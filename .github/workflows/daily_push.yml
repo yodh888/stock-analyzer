@@ -2,7 +2,7 @@ name: 自选股每日分析推送
 
 on:
   schedule:
-    - cron: '30 7 * * 1-5'
+    - cron: '0 8 * * 1-5'
   workflow_dispatch:
     inputs:
       force_run:
