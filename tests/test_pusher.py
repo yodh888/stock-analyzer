@@ -45,3 +45,41 @@ def test_serverchan_failure_does_not_log_secret(monkeypatch, caplog):
         assert pusher.push_to_serverchan(secret, "title", "content") is False
     assert secret not in caplog.text
     assert "ConnectionError" in caplog.text
+
+def test_feishu_payload_and_signature(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(pusher.time, "time", lambda: 1700000000)
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        return FakeResponse({"code": 0})
+
+    monkeypatch.setattr(pusher.requests, "post", fake_post)
+    assert pusher.push_to_feishu(
+        "https://open.feishu.cn/webhook/test",
+        "每日日报",
+        "测试内容",
+        "feishu-secret",
+    ) is True
+    assert captured["json"]["msg_type"] == "text"
+    assert "测试内容" in captured["json"]["content"]["text"]
+    assert captured["json"]["timestamp"] == "1700000000"
+    assert captured["json"]["sign"] == pusher._feishu_signature(
+        "feishu-secret",
+        "1700000000",
+    )
+
+
+def test_feishu_failure_does_not_log_webhook(monkeypatch, caplog):
+    monkeypatch.setattr(pusher.time, "sleep", lambda _: None)
+    webhook = "https://open.feishu.cn/webhook/secret-token"
+
+    def fake_post(url, json, timeout):
+        raise requests.ConnectionError(f"failed url: {url}")
+
+    monkeypatch.setattr(pusher.requests, "post", fake_post)
+    with caplog.at_level(logging.WARNING):
+        assert pusher.push_to_feishu(webhook, "title", "content") is False
+    assert webhook not in caplog.text
+    assert "ConnectionError" in caplog.text

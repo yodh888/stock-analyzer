@@ -2,7 +2,9 @@
 自选股每日分析推送脚本。
 
 环境变量:
-    SERVERCHAN_KEY  Server酱 SendKey（定时工作流必填）
+    SERVERCHAN_KEY  Server酱 SendKey（与飞书二选一）
+    FEISHU_WEBHOOK  飞书自定义机器人 Webhook（与Server酱二选一）
+    FEISHU_SECRET   飞书机器人签名 Secret（可选）
     AI_API_KEY      AI API Key（可选）
     AI_PROVIDER     deepseek/kimi/qwen/openai
     AI_MODEL        可选，服务商模型名称
@@ -23,7 +25,7 @@ from data_fetcher import (
     get_stock_name,
     is_trade_day,
 )
-from pusher import push_to_serverchan
+from pusher import push_to_feishu, push_to_serverchan
 from signals import generate_comprehensive_signal
 
 
@@ -182,6 +184,8 @@ def main() -> int:
         return 0
 
     sendkey = os.getenv("SERVERCHAN_KEY", "").strip()
+    feishu_webhook = os.getenv("FEISHU_WEBHOOK", "").strip()
+    feishu_secret = os.getenv("FEISHU_SECRET", "").strip()
     ai_key = os.getenv("AI_API_KEY", "").strip()
     ai_provider = normalize_provider(os.getenv("AI_PROVIDER", "") or AI_PROVIDER)
     ai_model = (os.getenv("AI_MODEL", "") or AI_MODEL).strip()
@@ -191,9 +195,14 @@ def main() -> int:
         print("⚠️ 已启用AI但未设置 AI_API_KEY，将使用纯规则版")
         ai_enabled = False
 
+    channels = []
+    if feishu_webhook:
+        channels.append("飞书")
+    if sendkey:
+        channels.append("Server酱")
     print(
         f"配置: AI={'开启(' + ai_provider + '/' + (ai_model or '默认模型') + ')' if ai_enabled else '关闭'}, "
-        f"推送={'开启' if sendkey else '关闭'}"
+        f"推送={','.join(channels) if channels else '关闭'}"
     )
 
     stocks = load_watchlist()
@@ -224,12 +233,22 @@ def main() -> int:
         print("❌ 所有股票均分析失败，任务返回非零状态")
         return 1
 
+    title = f"自选股日报 {datetime.now(SHANGHAI_TZ):%m-%d}"
+    push_failed = False
+    if feishu_webhook:
+        if push_to_feishu(feishu_webhook, title, report, feishu_secret):
+            print("✓ 飞书推送成功")
+        else:
+            print("❌ 飞书推送失败")
+            push_failed = True
     if sendkey:
-        title = f"自选股日报 {datetime.now(SHANGHAI_TZ):%m-%d}"
-        if not push_to_serverchan(sendkey, title, report):
-            print("❌ 推送失败，任务返回非零状态")
-            return 1
-        print("✓ 推送成功")
+        if push_to_serverchan(sendkey, title, report):
+            print("✓ Server酱推送成功")
+        else:
+            print("❌ Server酱推送失败")
+            push_failed = True
+    if push_failed:
+        return 1
 
     return 0
 

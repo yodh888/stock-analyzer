@@ -105,9 +105,20 @@ with st.sidebar:
     push_enabled = st.toggle("启用推送", value=False)
     push_type = None
     push_token = ""
+    push_secret = ""
     if push_enabled:
-        push_type = st.selectbox("推送方式", ["wecom", "serverchan", "pushplus"])
-        push_token = st.text_input("推送 Token/Webhook", type="password")
+        push_type = st.selectbox(
+            "推送方式",
+            ["feishu", "wecom", "serverchan", "pushplus"],
+        )
+        token_label = "飞书 Webhook" if push_type == "feishu" else "推送 Token/Webhook"
+        push_token = st.text_input(token_label, type="password")
+        if push_type == "feishu":
+            push_secret = st.text_input(
+                "飞书签名 Secret（可选）",
+                type="password",
+                value=config.FEISHU_SECRET,
+            )
 
 
 # ============ 主界面 ============
@@ -369,6 +380,7 @@ if analysis:
                 state_code,
                 result,
                 ai_text,
+                push_secret=push_secret,
             )
             if success:
                 st.success("推送成功，请查看手机")
@@ -408,6 +420,6 @@ elif not analyze_btn:
         - 成本可控
 
         **推送（可选）**
-        - 企业微信 / Server酱 / PushPlus
+        - 飞书 / 企业微信 / Server酱 / PushPlus
         """)
     st.caption("⚠️ 本工具仅供学习研究，不构成任何投资建议。股市有风险，投资需谨慎。")

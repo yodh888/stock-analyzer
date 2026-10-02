@@ -43,9 +43,10 @@ jobs:
       - name: 校验必要密钥
         env:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         run: |
-          if [ -z "$SERVERCHAN_KEY" ]; then
-            echo "::error::未配置 SERVERCHAN_KEY，无法执行定时推送"
+          if [ -z "$SERVERCHAN_KEY" ] && [ -z "$FEISHU_WEBHOOK" ]; then
+            echo "::error::请至少配置 FEISHU_WEBHOOK 或 SERVERCHAN_KEY"
             exit 1
           fi
 
@@ -54,6 +55,8 @@ jobs:
           TZ: Asia/Shanghai
           FORCE_RUN: ${{ github.event.inputs.force_run || 'false' }}
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
           AI_MODEL: ${{ secrets.AI_MODEL }}

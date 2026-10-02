@@ -45,3 +45,5 @@ REFRESH_INTERVAL = 60
 
 # ============ 推送配置（可选）============
 WECOM_WEBHOOK = os.getenv("WECOM_WEBHOOK", "")
+FEISHU_WEBHOOK = os.getenv("FEISHU_WEBHOOK", "")
+FEISHU_SECRET = os.getenv("FEISHU_SECRET", "")

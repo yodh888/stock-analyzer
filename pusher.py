@@ -1,5 +1,8 @@
 """消息推送模块。"""
 
+import base64
+import hashlib
+import hmac
 import logging
 import time
 
@@ -106,6 +109,41 @@ def push_to_pushplus(token: str, title: str, content: str) -> bool:
         return False
 
 
+def _feishu_signature(secret: str, timestamp: str) -> str:
+    """生成飞书自定义机器人签名。"""
+    string_to_sign = f"{timestamp}\n{secret}"
+    digest = hmac.new(
+        string_to_sign.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).digest()
+    return base64.b64encode(digest).decode("utf-8")
+
+
+def push_to_feishu(
+    webhook: str,
+    title: str,
+    content: str,
+    secret: str = "",
+) -> bool:
+    """推送到飞书自定义机器人，支持可选的签名校验。"""
+    if not webhook:
+        return False
+    try:
+        payload = {
+            "msg_type": "text",
+            "content": {"text": f"{title}\n\n{content}"},
+        }
+        if secret:
+            timestamp = str(int(time.time()))
+            payload["timestamp"] = timestamp
+            payload["sign"] = _feishu_signature(secret, timestamp)
+        result = _post_json(webhook, json_data=payload)
+        return result.get("code", -1) == 0
+    except Exception as exc:
+        LOGGER.warning("飞书推送失败: %s", type(exc).__name__)
+        return False
+
+
 def push_result(
     push_type: str,
     token: str,
@@ -113,6 +151,7 @@ def push_result(
     stock_code: str,
     signal_result: dict,
     ai_text: str = "",
+    push_secret: str = "",
 ) -> bool:
     """统一推送入口。"""
     title = (
@@ -144,4 +183,6 @@ def push_result(
         return push_to_serverchan(token, title, content)
     if push_type == "pushplus":
         return push_to_pushplus(token, title, content)
+    if push_type == "feishu":
+        return push_to_feishu(token, title, content, push_secret)
     return False

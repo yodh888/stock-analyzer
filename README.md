@@ -1,7 +1,7 @@
 # 📈 A股智能分析工具
 
 技术面 + 轻量基本面 + AI辅助解读 的股票分析工具
-支持：电脑网页、手机浏览器、微信每日推送
+支持：电脑网页、手机浏览器、微信/飞书每日推送
 
 ---
 
@@ -24,11 +24,11 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 ---
 
-### 方式二：微信每日推送（零成本，不用开电脑）⭐推荐
+### 方式二：手机每日推送（微信/飞书，零成本，不用开电脑）⭐推荐
 
 **适合**：每天自动收到自选股分析，不用开电脑
 
-**原理**：GitHub Actions 每天定时运行分析脚本，通过 Server酱 推送到你的微信。
+**原理**：GitHub Actions 每天定时运行分析脚本，通过飞书机器人或 Server酱推送到手机。
 
 #### 部署步骤
 
@@ -49,7 +49,9 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 | 名称 | 值 | 必填 |
 |------|-----|------|
-| `SERVERCHAN_KEY` | 你的 Server酱 SendKey | ✅ 必填 |
+| `FEISHU_WEBHOOK` | 飞书自定义机器人 Webhook | 与 Server酱二选一 |
+| `FEISHU_SECRET` | 飞书机器人签名 Secret | 可选 |
+| `SERVERCHAN_KEY` | 你的 Server酱 SendKey | 与飞书二选一 |
 | `AI_API_KEY` | DeepSeek/Kimi/通义千问/OpenAI 的 API Key | ❌ 可选 |
 | `AI_PROVIDER` | `deepseek`、`kimi`、`qwen` 或 `openai` | ❌ 可选 |
 | `AI_MODEL` | 自定义模型名称；留空使用默认模型 | ❌ 可选 |
@@ -85,13 +87,31 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 - 这个测试只发送一句 `只回复 OK`，不会读取行情，也不会发送微信
 - Workflow 成功代表 API Key、服务商和模型配置有效
 
+**5.2 配置飞书机器人（推荐）**
+
+飞书自定义机器人的基础推送不额外收费，具体额度和企业政策以飞书官方为准。
+
+1. 在飞书创建一个只有自己的群，或使用已有群。
+2. 打开群设置 → 群机器人 → 添加机器人 → 自定义机器人。
+3. 设置机器人名称，例如“股票日报助手”。
+4. 安全设置建议选择“签名校验”，并保存签名密钥；也可以选择“自定义关键词”，关键词设置为“自选股”。
+5. 复制 Webhook 地址。
+6. 回到 GitHub：`Settings` → `Secrets and variables` → `Actions` → `New repository secret`，添加：
+   - `FEISHU_WEBHOOK`：飞书 Webhook 地址
+   - `FEISHU_SECRET`：启用签名校验时填写，否则可以不创建
+7. 配置飞书后，`SERVERCHAN_KEY` 可以删除或保留。两者都存在时，程序会同时发送到飞书和 Server酱。
+8. 运行 `自选股每日分析推送`；非交易日需要勾选 `force_run`。
+9. 飞书群里收到“自选股日报”即表示配置成功。
+
+程序支持飞书签名校验，日志不会打印完整 Webhook 或签名 Secret。
+
 **6. 定时推送**
 已配置为**北京时间周一到周五 15:30**（盘后）自动运行，非交易日会自动跳过。
 可在 `.github/workflows/daily_push.yml` 中修改 `cron` 表达式调整时间；手动触发时可勾选 `force_run` 强制执行。
 
 #### 成本
 - GitHub Actions：免费（每月2000分钟额度）
-- Server酱：免费版每天5条推送
+- Server酱：免费版每天5条推送；飞书自定义机器人通常不额外收费
 - AI分析：可选，DeepSeek约0.003元/次
 
 ---
@@ -132,7 +152,7 @@ nohup streamlit run app.py --server.address 127.0.0.1 --server.port 8501 &
 - 成本约 0.003-0.05 元/次
 
 ### 推送到手机
-- Server酱（微信推送）
+- Server酱（微信推送）、飞书机器人
 - 企业微信群机器人
 - PushPlus
 
